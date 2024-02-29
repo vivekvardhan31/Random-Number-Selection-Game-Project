@@ -1,0 +1,355 @@
+from tkinter import *
+import tkinter as tk
+from tkinter import Tk, Label
+from tkinter import messagebox
+from tkinter import font
+from PIL import Image, ImageTk
+import sqlite3
+import random
+
+def create_table():
+    conn = sqlite3.connect('ludo_data.db')
+    cursor = conn.cursor()
+    cursor.execute("CREATE TABLE IF NOT EXISTS ludousers (name TEXT, gmail TEXT, dob TEXT, username TEXT UNIQUE, password TEXT)")
+    conn.commit()
+    conn.close()
+
+create_table()
+
+def signup():
+    name_val = name_var.get()
+    gmail_val = gmail_var.get()
+    dob_val = dob_var.get()
+    username_val = username_var.get()
+    password_val = password_var.get()
+
+    conn = sqlite3.connect('ludo_data.db')
+    cursor = conn.cursor()
+    try:
+        cursor.execute("INSERT INTO ludousers (name, gmail, dob, username, password) VALUES (?, ?, ?, ?, ?)",
+                       (name_val, gmail_val, dob_val, username_val, password_val))
+        conn.commit()
+        messagebox.showinfo("Success", "User registered successfully.")
+    except sqlite3.IntegrityError:
+        messagebox.showerror("Error", "Username already exists.")
+    conn.close()
+
+def signupfun():
+    mainwindow.destroy()
+    signupwindow = Tk()
+    signupwindow.geometry("1400x1400")
+    signupwindow.title("LUDO GAME SIGN UP")
+    signupwindow.config(background='gold')
+
+    custom_font = font.Font(family="Dancing Script", size=50)
+    Label(signupwindow, text="LUDO GAME", font=custom_font, fg='black', bg='gold').place(x=490, y=100)
+
+    global name_var, gmail_var, dob_var, username_var, password_var
+
+    name_var = StringVar()
+    gmail_var = StringVar()
+    dob_var = StringVar()
+    username_var = StringVar()
+    password_var = StringVar()
+
+    Label(signupwindow, text="NAME", font=("monaco", 20), fg='blue', bg='gold').place(x=400, y=300)
+    Entry(signupwindow, textvariable=name_var, font=("monaco", 15), fg='red').place(x=700, y=300)
+
+    Label(signupwindow, text="GMAIL", font=("monaco", 20), fg='blue', bg='gold').place(x=400, y=350)
+    Entry(signupwindow, textvariable=gmail_var, font=("monaco", 15), fg='red').place(x=700, y=350)
+
+    Label(signupwindow, text="DOB", font=("monaco", 20), fg='blue', bg='gold').place(x=400, y=400)
+    Entry(signupwindow, textvariable=dob_var, font=("monaco", 15), fg='red').place(x=700, y=400)
+
+    Label(signupwindow, text="PASSWORD", font=("monaco", 20), fg='blue', bg='gold').place(x=400, y=500)
+    Entry(signupwindow, textvariable=password_var, show="*", font=("monaco", 15), fg='red').place(x=700, y=500)
+
+    Label(signupwindow, text="USERNAME", font=("monaco", 20), fg='blue', bg='gold').place(x=400, y=450)
+    Entry(signupwindow, textvariable=username_var, font=("monaco", 15), fg='red').place(x=700, y=450)
+
+    Button(signupwindow, text="SIGN UP", font=("monaco", 15), fg='blue', command=signup).place(x=660, y=550)
+    Button(signupwindow, text="Sign in", font=("monaco", 15), fg='blue', command=main).place(x=550, y=550)
+
+def signin():
+    global playwindow
+    username_val = username_signin_var.get()
+    password_val = password_signin_var.get()
+
+    conn = sqlite3.connect('ludo_data.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM ludousers WHERE username=? AND password=?", (username_val, password_val))
+    user = cursor.fetchone()
+    conn.close()
+
+    if user:
+            mainwindow.destroy()
+            playwindow = Tk()
+            playwindow.geometry("1400x1400")
+            playwindow.title("LUDO PLAY GAME")
+            playwindow.config(background='blue')
+
+            img = Image.open("person2.jpg")
+            img = img.resize((250, 250), Image.ADAPTIVE)
+            img2 = ImageTk.PhotoImage(img)
+            r = Label(playwindow, image=img2)
+            r.place(x=60, y=100)
+            r.image = img2
+
+            img = Image.open("person.jpg")
+            img = img.resize((250, 250), Image.ADAPTIVE)
+            img2 = ImageTk.PhotoImage(img)
+            r = Label(playwindow, image=img2)
+            r.place(x=550, y=100)
+            r.image = img2
+
+            Button(playwindow,text="PLAY WITH COMPUTER",font=("Arial", 15, "underline"),fg='blue',command=play_with_computer).place(x=70,y=380)
+            Button(playwindow,text="PLAY WITH FRIEND",font=("Arial", 15, "underline"),fg='blue',command=start_dice_roller).place(x=570,y=380)
+        
+    else:
+        messagebox.showerror("Error", "Invalid username or password.")
+
+
+
+def play_with_computer():
+    global playwindow
+    playwindow.destroy()
+    root = tk.Tk()
+    app = DiceGame(root)
+    root.mainloop()
+
+class DiceGame:
+    def __init__(self, master):
+        self.master = master
+        self.master.title("Dice Game")
+        self.master.geometry("1400x1400")
+        self.master.config(background='lightblue')
+
+        self.dice_images = [f"dice{i}.png" for i in range(1, 7)]
+        self.current_dice_image = self.load_dice_image(self.dice_images[0])
+
+        self.user_score = 0
+        self.computer_score = 0
+        self.user_roll_count = 0
+        self.computer_roll_count = 0
+
+        self.score_label = tk.Label(master, text="",font=("Courier", 16),bg='lightblue')
+        self.score_label.pack()
+
+        self.roll_button = tk.Button(master, text="Roll Dice",font=("Courier", 15, "bold"), bg='white', command=self.roll_dice)
+        self.roll_button.place(x=590,y=300)
+
+        self.dice_label = tk.Label(master, image=self.current_dice_image)
+        self.dice_label.place(x=550, y=50)
+
+        self.score_label = tk.Label(master, text="", font=("Courier", 16),bg='lightblue')
+        self.score_label.place(x=550, y=400)
+
+        self.winner_label = tk.Label(master, text="",bg='lightblue',font=("Courier", 20, "bold"))
+        self.winner_label.place(x=550,y=500)
+
+
+    def load_dice_image(self, filename):
+        img = Image.open(filename)
+        img = img.resize((200, 200), Image.ADAPTIVE)
+        return ImageTk.PhotoImage(img)
+
+    def roll_dice(self):
+        if self.user_roll_count < 10:
+            user_roll = random.randint(1, 6)
+            self.user_score += user_roll
+            self.user_roll_count += 1
+
+            self.update_score_label()
+
+            self.current_dice_image = self.load_dice_image(self.dice_images[user_roll - 1])
+            self.dice_label.config(image=self.current_dice_image)
+
+        if self.computer_roll_count < 10:
+            computer_roll = random.randint(1, 6)
+            self.computer_score += computer_roll
+            self.computer_roll_count += 1
+
+            self.update_score_label()
+
+        if self.user_roll_count == 10 and self.computer_roll_count == 10:
+            self.display_winner()
+
+    def update_score_label(self):
+        self.score_label.config(text=f"you: {self.user_score}, Computer: {self.computer_score}")
+
+    def display_winner(self):
+        if self.user_score > self.computer_score:
+            winner_text = f"Congratulations, you win!"
+        elif self.user_score < self.computer_score:
+            winner_text = "YOU LOST"
+        else:
+            winner_text = "It's a tie!"
+
+        self.winner_label.config(text=winner_text)
+        
+
+def start_dice_roller():
+    global playwindow
+    playwindow.destroy()
+    root = tk.Tk()
+    app = DiceRoller(root)
+    root.mainloop()
+
+class DiceRoller:
+    def __init__(self, gameplay):
+        self.gameplay = gameplay
+        self.gameplay.title("Dice Roller")
+        self.gameplay.geometry("1400x1400")
+        self.gameplay.config(background='lightgreen')
+        self.current_player = 1
+        self.roll_count = 0
+        self.player1_numbers = []
+        self.player2_numbers = []
+        self.winner=""
+        self.player1_name = ""
+        self.player2_name = ""
+        self.player1_score = 0
+        self.player2_score = 0
+
+
+        self.player1_info_label = tk.Label(self.gameplay, text="", font=("Courier", 18, "bold"), bg='lightgreen')
+        self.player1_info_label.place(x=1000, y=20)
+
+        self.player2_info_label = tk.Label(self.gameplay, text="", font=("Courier", 18, "bold"), bg='lightgreen')
+        self.player2_info_label.place(x=1000, y=60)
+
+
+        self.player1_name_label = tk.Label(self.gameplay, text="Player 1 Name:",font=("monaco", 25),bg='lightgreen')
+        self.player1_name_label.place(x=50,y=20)
+        self.player1_name_entry = tk.Entry(self.gameplay,font=("monaco", 25))
+        self.player1_name_entry.place(x=400,y=20)
+
+        self.player2_name_label = tk.Label(self.gameplay, text="Player 2 Name:",font=("monaco", 25),bg='lightgreen')
+        self.player2_name_label.place(x=50,y=100)
+        self.player2_name_entry = tk.Entry(self.gameplay,font=("monaco", 25))
+        self.player2_name_entry.place(x=400,y=100)
+
+        self.roll_button = tk.Button(self.gameplay, text="Roll Dice", font=("Arial", 14), command=self.roll_dice, bg='lightgreen')
+        self.roll_button.place(x=300,y=200)
+
+        self.result_label = tk.Label(self.gameplay, text="", font=("Courier", 18, "bold"),bg='lightgreen')
+        self.result_label.place(x=150,y=300)
+
+        self.total_label = tk.Label(self.gameplay, text="", font=("Courier", 18, "bold"),bg='lightgreen')
+        self.total_label.place(x=150,y=400)
+
+        self.winner_label = tk.Label(self.gameplay, text="", font=("Courier", 18, "bold"),bg='lightgreen')
+        self.winner_label.place(x=150,y=500)
+
+        
+    def roll_dice(self):
+        
+        if self.roll_count < 10:
+
+            random_number = random.randint(1, 6)
+
+
+            if random_number==1:
+                img = Image.open("dice1.png")
+                img = img.resize((400,400), Image.ADAPTIVE)
+                img2 = ImageTk.PhotoImage(img)
+                r = Label(self.gameplay, image=img2)
+                r.place(x=700, y=200)
+                r.image = img2
+
+            if random_number==2:
+                img = Image.open("dice2.png")
+                img = img.resize((400,400), Image.ADAPTIVE)
+                img2 = ImageTk.PhotoImage(img)
+                r = Label(self.gameplay, image=img2)
+                r.place(x=700, y=200)
+                r.image = img2
+
+            if random_number==3:
+                img = Image.open("dice3.png")
+                img = img.resize((400,400), Image.ADAPTIVE)
+                img2 = ImageTk.PhotoImage(img)
+                r = Label(self.gameplay, image=img2)
+                r.place(x=700, y=200)
+                r.image = img2
+
+            if random_number==4:
+                img = Image.open("dice4.png")
+                img = img.resize((400,400), Image.ADAPTIVE)
+                img2 = ImageTk.PhotoImage(img)
+                r = Label(self.gameplay, image=img2)
+                r.place(x=700, y=200)
+                r.image = img2
+
+            if random_number==5:
+                img = Image.open("dice5.png")
+                img = img.resize((400,400), Image.ADAPTIVE)
+                img2 = ImageTk.PhotoImage(img)
+                r = Label(self.gameplay, image=img2)
+                r.place(x=700, y=200)
+                r.image = img2
+
+            if random_number==6:
+                img = Image.open("dice6.png")
+                img = img.resize((400,400), Image.ADAPTIVE)
+                img2 = ImageTk.PhotoImage(img)
+                r = Label(self.gameplay, image=img2)
+                r.place(x=700, y=200)
+                r.image = img2
+
+
+            if self.current_player == 1:
+                self.player1_numbers.append(random_number)
+                self.result_label.config(text=f"{self.player1_name_entry.get()}: {random_number}", bg='lightgreen')
+                self.player1_score += random_number
+                self.player1_info_label.config(text=f"{self.player1_name_entry.get()}: {self.player1_score}")
+                self.current_player = 2
+            else:
+                self.player2_numbers.append(random_number)
+                self.result_label.config(text=f"{self.player2_name_entry.get()}: {random_number}", bg='lightgreen')
+                self.player2_score += random_number
+                self.player2_info_label.config(text=f"{self.player2_name_entry.get()}: {self.player2_score}")
+                self.current_player = 1
+            self.roll_count += 1
+
+        if self.roll_count == 10:
+            player1_sum = sum(self.player1_numbers)
+            player2_sum = sum(self.player2_numbers)
+            self.total_label.config(text=f"{self.player1_name_entry.get()} total: {player1_sum}\n{self.player2_name_entry.get()} total: {player2_sum}",bg='gold')
+
+            if player1_sum > player2_sum:
+                self.winner = self.player1_name_entry.get()
+            elif player2_sum > player1_sum:
+                self.winner = self.player2_name_entry.get()
+            else:
+                self.winner = "its a tie!"
+        print(self.winner)
+        self.winner_label.config(text=f"Winner: {self.winner}", bg='gold')
+
+def main():
+    global mainwindow, username_signin_var, password_signin_var,custom_font
+
+    mainwindow = Tk()
+    username_signin_var = StringVar()
+    password_signin_var = StringVar()
+    mainwindow.geometry("1400x1400")
+    mainwindow.title("LUDO GAME SIGNIN")
+    mainwindow.config(background='GOLD')
+
+    custom_font = font.Font(family="Dancing Script", size=50)
+    Label(mainwindow, text="LUDO GAME", font=custom_font, fg='black', bg='gold').place(x=490, y=100)
+
+    Label(mainwindow, text="USERNAME", font=("monaco", 20), fg='blue', bg='gold').place(x=400, y=300)
+    Entry(mainwindow, textvariable=username_signin_var, font=("monaco", 15), fg='red').place(x=650, y=301)
+
+    Label(mainwindow, text="PASSWORD", font=("monaco", 20), fg='blue', bg='gold').place(x=400, y=350)
+    Entry(mainwindow, textvariable=password_signin_var, show="*", font=("monaco", 15), fg='red').place(x=650, y=351)
+
+    Button(mainwindow, text="SIGNIN", font=("monaco", 15), fg='blue', command=signin).place(x=550, y=400)
+    Button(mainwindow, text="SIGNUP", font=("monaco", 15), fg='blue', command=signupfun).place(x=650, y=400)
+
+    mainwindow.mainloop()
+
+
+
+main()
